@@ -61,3 +61,10 @@ changeCentury
 -------------
 
 Fired when the *view* century is changed from millennium view.
+
+
+dragRange
+---------
+
+Fired after a range is selected by dragging across days. The ``dates`` array
+contains the start and end dates of the selected range.
