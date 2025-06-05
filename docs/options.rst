@@ -491,6 +491,14 @@ Boolean. Default: false
 If true, selecting the currently active date in the datepicker will unset the respective date. This option is always true when the multidate option is being used.
 
 
+dragRange
+---------
+
+Boolean. Default: false
+
+Allows selecting a date range by clicking and dragging across days. While dragging, all dates between the start and end are highlighted. Release the mouse button to set the range. When disabled, dragging has no effect.
+
+
 updateViewDate
 --------------
 
@@ -565,6 +573,7 @@ title                        ''
 todayBtn                     false
 todayHighlight               false
 toggleActive                 false
+dragRange                   false
 weekStart                    0 (Sunday)
 zIndexOffset                 10
 =====================        =============

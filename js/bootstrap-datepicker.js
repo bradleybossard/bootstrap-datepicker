@@ -108,9 +108,12 @@
 
 		this._process_options(options);
 
-		this.dates = new DateArray();
-		this.viewDate = this.o.defaultViewDate;
-		this.focusDate = null;
+                this.dates = new DateArray();
+                this.viewDate = this.o.defaultViewDate;
+                this.focusDate = null;
+                this.dragging = false;
+                this.dragStartDate = null;
+                this.dragEndDate = null;
 
 		this.element = $(element);
 		this.isInput = this.element.is('input');
@@ -425,14 +428,30 @@
 				[this.picker, '.prev, .next', {
 					click: $.proxy(this.navArrowsClick, this)
 				}],
-				[this.picker, '.day:not(.disabled)', {
-					click: $.proxy(this.dayCellClick, this)
-				}],
-				[$(window), {
-					resize: $.proxy(this.place, this)
-				}],
-				[$(document), {
-					'mousedown touchstart': $.proxy(function(e){
+                               [this.picker, '.day:not(.disabled)', {
+                                       click: $.proxy(this.dayCellClick, this)
+                               }]
+                       ];
+                       if (this.o.dragRange) {
+                               this._secondaryEvents.push([
+                                       this.picker,
+                                       '.day:not(.disabled)',
+                                       {
+                                               mousedown: $.proxy(this.dragStart, this),
+                                               touchstart: $.proxy(this.dragStart, this),
+                                               mouseover: $.proxy(this.dragMove, this),
+                                               touchmove: $.proxy(this.dragMove, this),
+                                               mouseup: $.proxy(this.dragEnd, this),
+                                               touchend: $.proxy(this.dragEnd, this)
+                                       }
+                               ]);
+                       }
+                       this._secondaryEvents = this._secondaryEvents.concat([
+                               [$(window), {
+                                       resize: $.proxy(this.place, this)
+                               }],
+                               [$(document), {
+                                       'mousedown touchstart': $.proxy(function(e){
 						// Clicked outside the datepicker, hide it
 						if (!(
 							this.element.is(e.target) ||
@@ -444,8 +463,8 @@
 							this.hide();
 						}
 					}, this)
-				}]
-			];
+                                }]
+                       ]);
 		},
 		_attachEvents: function(){
 			this._detachEvents();
@@ -1245,10 +1264,10 @@
 			delete this._focused_from;
 		},
 
-		dayCellClick: function(e){
-			var $target = $(e.currentTarget);
-			var timestamp = $target.data('date');
-			var date = new Date(timestamp);
+                dayCellClick: function(e){
+                        var $target = $(e.currentTarget);
+                        var timestamp = $target.data('date');
+                        var date = new Date(timestamp);
 
 			if (this.o.updateViewDate) {
 				if (date.getUTCFullYear() !== this.viewDate.getUTCFullYear()) {
@@ -1259,8 +1278,54 @@
 					this._trigger('changeMonth', this.viewDate);
 				}
 			}
-			this._setDate(date);
-		},
+                        this._setDate(date);
+                },
+
+                dragStart: function(e){
+                        var $target = $(e.currentTarget);
+                        var timestamp = $target.data('date');
+                        this.dragging = true;
+                        this.dragStartDate = new Date(timestamp);
+                        this.dragEndDate = this.dragStartDate;
+                        this.setRange([this.dragStartDate, this.dragEndDate]);
+                        e.preventDefault();
+                },
+
+                dragMove: function(e){
+                        if (!this.dragging)
+                                return;
+                        var $target = $(e.currentTarget);
+                        var timestamp = $target.data('date');
+                        this.dragEndDate = new Date(timestamp);
+                        var start = this.dragStartDate;
+                        var end = this.dragEndDate;
+                        if (start > end){
+                                var tmp = start; start = end; end = tmp;
+                        }
+                        this.setRange([start, end]);
+                },
+
+                dragEnd: function(e){
+                        if (!this.dragging)
+                                return;
+                        this.dragging = false;
+                        var $target = $(e.currentTarget);
+                        var timestamp = $target.data('date');
+                        this.dragEndDate = new Date(timestamp);
+                        var start = this.dragStartDate;
+                        var end = this.dragEndDate;
+                        if (start > end){
+                                var tmp = start; start = end; end = tmp;
+                        }
+                        this.dates.clear();
+                        this.dates.push(start);
+                        this.dates.push(end);
+                        this.setRange([start, end]);
+                        this.setValue();
+                        this.fill();
+                        this._trigger('dragRange', this.dragEndDate);
+                        this._trigger('changeDate');
+                },
 
 		// Clicked on prev or next
 		navArrowsClick: function(e){
@@ -1721,8 +1786,9 @@
 		startDate: -Infinity,
 		startView: 0,
 		todayBtn: false,
-		todayHighlight: false,
-		updateViewDate: true,
+                todayHighlight: false,
+                dragRange: false,
+                updateViewDate: true,
 		weekStart: 0,
 		disableTouchKeyboard: false,
 		enableOnReadonly: true,
